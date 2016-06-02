@@ -7,8 +7,8 @@ import (
 	"os"
 	"runtime"
 
-	"lib/shuffle"
-	"lib/uuid"
+	"xor/lib/shuffle"
+	"xor/lib/uuid"
 )
 
 const (

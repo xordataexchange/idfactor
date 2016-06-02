@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"lib/idfactor"
+	"xor/lib/idfactor"
 )
 
 var usage = func() {
