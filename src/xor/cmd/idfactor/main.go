@@ -8,13 +8,14 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"sync"
 
 	"xor/lib/idfactor"
+	"xor/lib/idfactor/atrisk"
+	"xor/lib/idfactor/compromised"
 )
 
 var usage = func() {
-	str := `usage: idfactor [-d delimiter] [-m file] [-o directory] [file]
+	str := `usage: idfactor [-c] [-d delimiter] [-m file] [-o directory] [file]
 
 Split each identity record into pieces and output them in shuffled order.
 
@@ -22,6 +23,8 @@ The input file is a delimited text file with column headers where each row
 contains a full identity record consisting of a unique record identifier
 followed by name, date of birth, ssn, address, phone number, and email address
 fields. If a file is not supplied then it is read from the standard input.
+Additionally, if -c is specified then compromised entity input format is
+assumed. This formats adds a breach identifier after the record identifier.
 
 Output files are written to the current working directory unless an output
 directory is specified with -o.
@@ -35,17 +38,30 @@ full identity record from the identity elements.
 }
 
 func main() {
-	// command line arguments
 	var (
-		delim   string
-		mapfile string
-		dir     string
+		delim           string
+		mapfile         string
+		dir             string
+		fieldsPerRecord int
+		comp            bool
+		factorID        func([][]string, string) ([][]string, error)
 	)
+
 	flag.StringVar(&delim, "d", "|", "field `delimiter` for the input file")
 	flag.StringVar(&mapfile, "m", "", "write an identity map to the named `file`")
 	flag.StringVar(&dir, "o", "", "write the identity elements to the named `directory`")
+	flag.BoolVar(&comp, "c", false, "use compromised entity input format")
 	flag.Usage = usage
 	flag.Parse()
+
+	// check at-risk or compromised mode
+	if comp {
+		fieldsPerRecord = compromised.RecordLength
+		factorID = compromised.IDFactor
+	} else {
+		fieldsPerRecord = atrisk.RecordLength
+		factorID = atrisk.IDFactor
+	}
 
 	// check for single char delimiter
 	if len(delim) != 1 {
@@ -69,7 +85,9 @@ func main() {
 
 	reader := csv.NewReader(in)
 	reader.Comma = rune(delim[0])
-	reader.FieldsPerRecord = idfactor.RecordLength
+	reader.FieldsPerRecord = fieldsPerRecord
+
+	// read and discard header
 	if _, err = reader.Read(); err != nil {
 		log.Fatalf("error reading file : %s", err)
 	}
@@ -82,46 +100,13 @@ func main() {
 		log.Fatalf("error closing file: %s", err)
 	}
 
-	// maps from record id to element id
-	var (
-		nameid    map[string]string
-		ssnid     map[string]string
-		addressid map[string]string
-		phoneid   map[string]string
-		emailid   map[string]string
-	)
-
-	workers := sync.WaitGroup{}
-	workers.Add(5)
-	go func() {
-		filename := filepath.Join(dir, "name_dob_elements.psv")
-		nameid = idfactor.WriteNameDobFile(records, filename)
-		workers.Done()
-	}()
-	go func() {
-		filename := filepath.Join(dir, "ssn_elements.psv")
-		ssnid = idfactor.WriteSsnFile(records, filename)
-		workers.Done()
-	}()
-	go func() {
-		filename := filepath.Join(dir, "address_elements.psv")
-		addressid = idfactor.WriteAddressFile(records, filename)
-		workers.Done()
-	}()
-	go func() {
-		filename := filepath.Join(dir, "phone_elements.psv")
-		phoneid = idfactor.WritePhoneFile(records, filename)
-		workers.Done()
-	}()
-	go func() {
-		filename := filepath.Join(dir, "email_elements.psv")
-		emailid = idfactor.WriteEmailFile(records, filename)
-		workers.Done()
-	}()
-	workers.Wait()
+	ids, err := factorID(records, dir)
+	if err != nil {
+		log.Fatalf("error factoring ids: %s", err)
+	}
 
 	if mapfile != "" {
 		filename := filepath.Join(dir, mapfile)
-		idfactor.WriteMapToFile(records, filename, nameid, ssnid, addressid, phoneid, emailid)
+		idfactor.WriteMapToFile(ids, filename)
 	}
 }
