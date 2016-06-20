@@ -9,7 +9,7 @@ import (
 // read random bytes from a csprng or panic
 func safeRandom(dst []byte) {
 	if _, err := rand.Read(dst); err != nil {
-		log.Fatalf("idfac/uuid: failed reading random bytes in call to New: %s", err)
+		log.Fatalf("uuid: failed reading random bytes in call to New: %s", err)
 	}
 }
 
