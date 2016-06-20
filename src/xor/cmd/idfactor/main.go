@@ -7,12 +7,98 @@ import (
 	"io"
 	"log"
 	"os"
-	"path/filepath"
 
 	"xor/lib/idfactor"
 	"xor/lib/idfactor/atrisk"
 	"xor/lib/idfactor/compromised"
 )
+
+// Output file names
+const (
+	NameDobFile     = "name_dob_elements.psv"
+	SsnFile         = "ssn_elements.psv"
+	AddressFile     = "address_elements.psv"
+	PhoneFile       = "phone_elements.psv"
+	EmailFile       = "email_elements.psv"
+	NameAddressFile = "name_address_elements.psv"
+	NamePhoneFile   = "name_phone_elements.psv"
+)
+
+//------------------------------------------------------------------------------
+// ID factoring for at-risk entities
+//------------------------------------------------------------------------------
+
+func AtRiskNameDob(recs [][]string) map[string]string {
+	return atrisk.WriteNameDobFile(recs, NameDobFile)
+}
+
+func AtRiskSsn(recs [][]string) map[string]string {
+	return atrisk.WriteSsnFile(recs, SsnFile)
+}
+
+func AtRiskAddress(recs [][]string) map[string]string {
+	return atrisk.WriteAddressFile(recs, AddressFile)
+}
+
+func AtRiskPhone(recs [][]string) map[string]string {
+	return atrisk.WritePhoneFile(recs, PhoneFile)
+}
+
+func AtRiskEmail(recs [][]string) map[string]string {
+	return atrisk.WriteEmailFile(recs, EmailFile)
+}
+
+func AtRiskNameAddress(recs [][]string) map[string]string {
+	return atrisk.WriteNameAddressFile(recs, NameAddressFile)
+}
+
+func AtRiskNamePhone(recs [][]string) map[string]string {
+	return atrisk.WriteNamePhoneFile(recs, NamePhoneFile)
+}
+
+func AtRiskIDFactoring(recs [][]string) (idmap [][]string, err error) {
+	return idfactor.IDFactor(recs, AtRiskNameDob, AtRiskSsn, AtRiskAddress, AtRiskPhone, AtRiskEmail, AtRiskNameAddress, AtRiskNamePhone)
+}
+
+//------------------------------------------------------------------------------
+// ID factoring for compromised entities
+//------------------------------------------------------------------------------
+
+func CompromisedNameDob(recs [][]string) map[string]string {
+	return compromised.WriteNameDobFile(recs, NameDobFile)
+}
+
+func CompromisedSsn(recs [][]string) map[string]string {
+	return compromised.WriteSsnFile(recs, SsnFile)
+}
+
+func CompromisedAddress(recs [][]string) map[string]string {
+	return compromised.WriteAddressFile(recs, AddressFile)
+}
+
+func CompromisedPhone(recs [][]string) map[string]string {
+	return compromised.WritePhoneFile(recs, PhoneFile)
+}
+
+func CompromisedEmail(recs [][]string) map[string]string {
+	return compromised.WriteEmailFile(recs, EmailFile)
+}
+
+func CompromisedNameAddress(recs [][]string) map[string]string {
+	return compromised.WriteNameAddressFile(recs, NameAddressFile)
+}
+
+func CompromisedNamePhone(recs [][]string) map[string]string {
+	return compromised.WriteNamePhoneFile(recs, NamePhoneFile)
+}
+
+func CompromisedIDFactoring(recs [][]string) (idmap [][]string, err error) {
+	return idfactor.IDFactor(recs, CompromisedNameDob, CompromisedSsn, CompromisedAddress, CompromisedPhone, CompromisedEmail, CompromisedNameAddress, CompromisedNamePhone)
+}
+
+//------------------------------------------------------------------------------
+// Command line tool
+//------------------------------------------------------------------------------
 
 var usage = func() {
 	str := `usage: idfactor [-c] [-d delimiter] [-m file] [-o directory] [file]
@@ -43,24 +129,24 @@ func main() {
 		mapfile         string
 		dir             string
 		fieldsPerRecord int
-		comp            bool
-		factorID        func([][]string, string) ([][]string, error)
+		isCompromised   bool
+		factor          func([][]string) ([][]string, error)
 	)
 
 	flag.StringVar(&delim, "d", "|", "field `delimiter` for the input file")
 	flag.StringVar(&mapfile, "m", "", "write an identity map to the named `file`")
 	flag.StringVar(&dir, "o", "", "write the identity elements to the named `directory`")
-	flag.BoolVar(&comp, "c", false, "use compromised entity input format")
+	flag.BoolVar(&isCompromised, "c", false, "use compromised entity input format")
 	flag.Usage = usage
 	flag.Parse()
 
 	// check at-risk or compromised mode
-	if comp {
+	if isCompromised {
 		fieldsPerRecord = compromised.RecordLength
-		factorID = compromised.IDFactor
+		factor = CompromisedIDFactoring
 	} else {
 		fieldsPerRecord = atrisk.RecordLength
-		factorID = atrisk.IDFactor
+		factor = AtRiskIDFactoring
 	}
 
 	// check for single char delimiter
@@ -68,6 +154,7 @@ func main() {
 		log.Fatal("delimiter must be exactly one character")
 	}
 
+	// read input from stdin or file
 	var (
 		in  io.ReadCloser
 		err error
@@ -83,15 +170,13 @@ func main() {
 		}
 	}
 
+	// read all records
 	reader := csv.NewReader(in)
 	reader.Comma = rune(delim[0])
 	reader.FieldsPerRecord = fieldsPerRecord
-
-	// read and discard header
 	if _, err = reader.Read(); err != nil {
 		log.Fatalf("error reading file : %s", err)
 	}
-
 	records, err := reader.ReadAll()
 	if err != nil {
 		log.Fatalf("error reading file: %s", err)
@@ -100,13 +185,15 @@ func main() {
 		log.Fatalf("error closing file: %s", err)
 	}
 
-	ids, err := factorID(records, dir)
+	// change to output directory and write output
+	if err := os.Chdir(dir); err != nil {
+		log.Fatalf(`error setting working directory to "%s":`, err)
+	}
+	ids, err := factor(records)
 	if err != nil {
 		log.Fatalf("error factoring ids: %s", err)
 	}
-
 	if mapfile != "" {
-		filename := filepath.Join(dir, mapfile)
-		idfactor.WriteMapToFile(ids, filename)
+		idfactor.WriteMapToFile(ids, mapfile)
 	}
 }

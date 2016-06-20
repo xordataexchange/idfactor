@@ -114,22 +114,24 @@ func WriteToWriter(recs [][]string, w io.Writer, header []string, get ElementGet
 //  This function applies a list of functions to a list of records.
 //------------------------------------------------------------------------------
 
-type ElementFileWriter func(recs [][]string) map[string]string
+type Factorer func(recs [][]string) map[string]string
 
-func IDFactor(recs [][]string, writers ...ElementFileWriter) ([][]string, error) {
-	n := len(writers)
+func IDFactor(recs [][]string, factorers ...Factorer) ([][]string, error) {
+	n := len(factorers)
 	idMaps := make([]map[string]string, n)
 
+	// concurrent factoring
 	workers := sync.WaitGroup{}
-	for i, write := range writers {
+	for i, factor := range factorers {
 		workers.Add(1)
-		go func(i int, write ElementFileWriter) {
-			idMaps[i] = write(recs)
+		go func(i int, factor Factorer) {
+			idMaps[i] = factor(recs)
 			workers.Done()
-		}(i, write)
+		}(i, factor)
 	}
 	workers.Wait()
 
+	// construct id map
 	ids := make([][]string, len(recs))
 	for i := range recs {
 		recordID := recs[i][recordIDField]
@@ -147,17 +149,12 @@ func IDFactor(recs [][]string, writers ...ElementFileWriter) ([][]string, error)
 // utility functions
 //------------------------------------------------------------------------------
 
-// Any returns true if and only if a nonempty string is supplied
-func Any(strs ...string) bool {
+// AllEmpty returns true if and only if no nonempty strings are supplied
+func AllEmpty(strs ...string) bool {
 	for _, s := range strs {
 		if s != "" {
-			return true
+			return false
 		}
 	}
-	return false
-}
-
-// None returns true if and only if no nonempty strings are supplied
-func None(strs ...string) bool {
-	return !Any(strs...)
+	return true
 }

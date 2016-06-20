@@ -3,7 +3,6 @@ package atrisk
 import (
 	"io"
 	"log"
-	"path/filepath"
 
 	"xor/lib/idfactor"
 )
@@ -60,7 +59,7 @@ var (
 // identity record. The extracted element is assigned the given id.
 func ToNameDob(rec []string, id string) []string {
 	checkLength(rec)
-	if idfactor.None(rec[FirstNameField], rec[LastNameField], rec[MiddleInitialField], rec[SuffixField], rec[DobField]) {
+	if idfactor.AllEmpty(rec[FirstNameField], rec[LastNameField], rec[MiddleInitialField], rec[SuffixField], rec[DobField]) {
 		return nil
 	}
 	return []string{id, rec[FirstNameField], rec[LastNameField], rec[MiddleInitialField], rec[SuffixField], rec[DobField]}
@@ -70,7 +69,7 @@ func ToNameDob(rec []string, id string) []string {
 // The extracted element is assigned the given id.
 func ToSsn(rec []string, id string) []string {
 	checkLength(rec)
-	if idfactor.None(rec[SsnField]) {
+	if idfactor.AllEmpty(rec[SsnField]) {
 		return nil
 	}
 	return []string{id, rec[SsnField]}
@@ -80,7 +79,7 @@ func ToSsn(rec []string, id string) []string {
 // record. The extracted element is assigned the given id.
 func ToAddress(rec []string, id string) []string {
 	checkLength(rec)
-	if idfactor.None(rec[AddressLine1Field], rec[AddressLine2Field], rec[CityField], rec[StateField], rec[ZipField]) {
+	if idfactor.AllEmpty(rec[AddressLine1Field], rec[AddressLine2Field], rec[CityField], rec[StateField], rec[ZipField]) {
 		return nil
 	}
 	return []string{id, rec[AddressLine1Field], rec[AddressLine2Field], rec[CityField], rec[StateField], rec[ZipField], ""}
@@ -90,7 +89,7 @@ func ToAddress(rec []string, id string) []string {
 // record. The extracted element is assigned the given id.
 func ToPhone(rec []string, id string) []string {
 	checkLength(rec)
-	if idfactor.None(rec[PhoneField]) {
+	if idfactor.AllEmpty(rec[PhoneField]) {
 		return nil
 	}
 	return []string{id, rec[PhoneField]}
@@ -100,7 +99,7 @@ func ToPhone(rec []string, id string) []string {
 // record. The extracted element is assigned the given id.
 func ToEmail(rec []string, id string) []string {
 	checkLength(rec)
-	if idfactor.None(rec[EmailField]) {
+	if idfactor.AllEmpty(rec[EmailField]) {
 		return nil
 	}
 	return []string{id, rec[EmailField]}
@@ -121,7 +120,7 @@ func ToNameAddress(rec []string, id string) []string {
 		rec[StateField],
 		rec[ZipField],
 	}
-	if idfactor.None(fields...) {
+	if idfactor.AllEmpty(fields...) {
 		return nil
 	}
 	return append([]string{id}, fields...)
@@ -138,7 +137,7 @@ func ToNamePhone(rec []string, id string) []string {
 		rec[SuffixField],
 		rec[PhoneField],
 	}
-	if idfactor.None(fields...) {
+	if idfactor.AllEmpty(fields...) {
 		return nil
 	}
 	return append([]string{id}, fields...)
@@ -252,35 +251,6 @@ func WriteNameAddress(recs [][]string, writer io.Writer) map[string]string {
 // order. It returns a map from record ids to element ids.
 func WriteNamePhone(recs [][]string, writer io.Writer) map[string]string {
 	return idfactor.WriteToWriter(recs, writer, namePhoneHeader, ToNamePhone)
-}
-
-//------------------------------------------------------------------------------
-// identity factoring for at-risk entities
-//------------------------------------------------------------------------------
-
-func IDFactor(recs [][]string, dir string) ([][]string, error) {
-	nameDobWriter := func(recs [][]string) map[string]string {
-		return WriteNameDobFile(recs, filepath.Join(dir, "name_dob_elements.psv"))
-	}
-	ssnWriter := func(recs [][]string) map[string]string {
-		return WriteSsnFile(recs, filepath.Join(dir, "ssn_elements.psv"))
-	}
-	addressWriter := func(recs [][]string) map[string]string {
-		return WriteAddressFile(recs, filepath.Join(dir, "address_elements.psv"))
-	}
-	phoneWriter := func(recs [][]string) map[string]string {
-		return WritePhoneFile(recs, filepath.Join(dir, "phone_elements.psv"))
-	}
-	emailWriter := func(recs [][]string) map[string]string {
-		return WriteEmailFile(recs, filepath.Join(dir, "email_elements.psv"))
-	}
-	nameAddressWriter := func(recs [][]string) map[string]string {
-		return WriteNameAddressFile(recs, filepath.Join(dir, "name_address_elements.psv"))
-	}
-	namePhoneWriter := func(recs [][]string) map[string]string {
-		return WriteNamePhoneFile(recs, filepath.Join(dir, "name_phone_elements.psv"))
-	}
-	return idfactor.IDFactor(recs, nameDobWriter, ssnWriter, addressWriter, phoneWriter, emailWriter, nameAddressWriter, namePhoneWriter)
 }
 
 //------------------------------------------------------------------------------
