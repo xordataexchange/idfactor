@@ -186,8 +186,10 @@ func main() {
 	}
 
 	// change to output directory and write output
-	if err := os.Chdir(dir); err != nil {
-		log.Fatalf(`error setting working directory to "%s":`, err)
+	if dir != "" {
+		if err := os.Chdir(dir); err != nil {
+			log.Fatalf(`error setting working directory to "%s":`, err)
+		}
 	}
 	ids, err := factor(records)
 	if err != nil {
