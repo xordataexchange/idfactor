@@ -38,6 +38,8 @@ const (
 	PhoneField
 	// EmailField is the field position of the record email address
 	EmailField
+	// UserNameField is the field position of the record username
+	UserNameField
 	// RecordLength is the number of fields in a record
 	RecordLength
 )
@@ -50,6 +52,7 @@ var (
 	emailHeader       = []string{"breach_id", "email_id", "email"}
 	nameAddressHeader = []string{"breach_id", "name_address_id", "first_name", "last_name", "middle_initial", "suffix", "address_line_1", "address_line_2", "city", "state", "zip", "zip4"}
 	namePhoneHeader   = []string{"breach_id", "name_phone_id", "first_name", "last_name", "middle_initial", "suffix", "phone"}
+	userNameHeader    = []string{"breach_id", "username_id", "username"}
 )
 
 //------------------------------------------------------------------------------
@@ -163,6 +166,16 @@ func ToNamePhone(rec []string, id string) []string {
 	return append([]string{rec[BreachIDField], id}, fields...)
 }
 
+// ToUserName extracts a username identity element from the given full identity
+// record. The extracted element is assigned the given id.
+func ToUserName(rec []string, id string) []string {
+	checkLength(rec)
+	if idfactor.AllEmpty(rec[UserNameField]) {
+		return nil
+	}
+	return []string{id, rec[UserNameField]}
+}
+
 //------------------------------------------------------------------------------
 // These functions extract identity elements from a list of full identity
 // records and write them to the named file in shuffled order. They return a
@@ -218,6 +231,13 @@ func WriteNamePhoneFile(recs [][]string, name string) map[string]string {
 	return idfactor.WriteToFile(recs, name, namePhoneHeader, ToNamePhone)
 }
 
+// WriteUserNameFile extracts usernameidentity elements from a list of full
+// identity elements and writes them to the named file in shuffled order. It
+// returns a map from record ids to element ids.
+func WriteUserNameFile(recs [][]string, name string) map[string]string {
+	return idfactor.WriteToFile(recs, name, userNameHeader, ToUserName)
+}
+
 //------------------------------------------------------------------------------
 // These functions extract identity elements from a list of full identity
 // records and write them to the named file in shuffled order. They return a
@@ -271,6 +291,13 @@ func WriteNameAddress(recs [][]string, writer io.Writer) map[string]string {
 // order. It returns a map from record ids to element ids.
 func WriteNamePhone(recs [][]string, writer io.Writer) map[string]string {
 	return idfactor.WriteToWriter(recs, writer, namePhoneHeader, ToNamePhone)
+}
+
+// WriteUserName extracts username identity elements from a list of full
+// identity elements and writes them to the given io.Writer in shuffled order.
+// It returns a map from record ids to element ids.
+func WriteUserName(recs [][]string, writer io.Writer) map[string]string {
+	return idfactor.WriteToWriter(recs, writer, userNameHeader, ToUserName)
 }
 
 //------------------------------------------------------------------------------

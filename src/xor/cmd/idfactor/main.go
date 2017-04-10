@@ -22,6 +22,7 @@ const (
 	EmailFile       = "email_elements.psv"
 	NameAddressFile = "name_address_elements.psv"
 	NamePhoneFile   = "name_phone_elements.psv"
+	UserNameFile    = "username_elements.psv"
 )
 
 //------------------------------------------------------------------------------
@@ -56,8 +57,12 @@ func AtRiskNamePhone(recs [][]string) map[string]string {
 	return atrisk.WriteNamePhoneFile(recs, NamePhoneFile)
 }
 
+func AtRiskUserName(recs [][]string) map[string]string {
+	return atrisk.WriteUserNameFile(recs, UserNameFile)
+}
+
 func AtRiskIDFactoring(recs [][]string) (idmap [][]string, err error) {
-	return idfactor.IDFactor(recs, AtRiskNameDob, AtRiskSsn, AtRiskAddress, AtRiskPhone, AtRiskEmail, AtRiskNameAddress, AtRiskNamePhone)
+	return idfactor.IDFactor(recs, AtRiskNameDob, AtRiskSsn, AtRiskAddress, AtRiskPhone, AtRiskEmail, AtRiskNameAddress, AtRiskNamePhone, AtRiskUserName)
 }
 
 //------------------------------------------------------------------------------
@@ -92,8 +97,12 @@ func CompromisedNamePhone(recs [][]string) map[string]string {
 	return compromised.WriteNamePhoneFile(recs, NamePhoneFile)
 }
 
+func CompromisedUserName(recs [][]string) map[string]string {
+	return compromised.WriteUserNameFile(recs, UserNameFile)
+}
+
 func CompromisedIDFactoring(recs [][]string) (idmap [][]string, err error) {
-	return idfactor.IDFactor(recs, CompromisedNameDob, CompromisedSsn, CompromisedAddress, CompromisedPhone, CompromisedEmail, CompromisedNameAddress, CompromisedNamePhone)
+	return idfactor.IDFactor(recs, CompromisedNameDob, CompromisedSsn, CompromisedAddress, CompromisedPhone, CompromisedEmail, CompromisedNameAddress, CompromisedNamePhone, CompromisedUserName)
 }
 
 //------------------------------------------------------------------------------
