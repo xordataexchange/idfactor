@@ -173,7 +173,7 @@ func ToUserName(rec []string, id string) []string {
 	if idfactor.AllEmpty(rec[UserNameField]) {
 		return nil
 	}
-	return []string{id, rec[UserNameField]}
+	return []string{rec[BreachIDField], id, rec[UserNameField]}
 }
 
 //------------------------------------------------------------------------------
